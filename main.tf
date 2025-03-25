@@ -40,7 +40,7 @@ resource "aws_security_group" "eks_sg" {
 
 # --- IAM Role for EKS ---
 resource "aws_iam_role" "eks_role" {
-  name = "eks-cluster-role"
+  name = "eks-cluster-role-new"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -127,7 +127,7 @@ resource "aws_instance" "jenkins_server" {
   instance_type = "t3.medium"
   subnet_id     = aws_subnet.subnet_1.id
   security_groups = [aws_security_group.eks_sg.id]
-  key_name      = "your-key" # Replace with your SSH key
+  key_name      = "healthcare-key"
 
   user_data = <<-EOF
     #!/bin/bash
@@ -149,10 +149,7 @@ resource "aws_instance" "jenkins_server" {
 # --- Amazon ECR Repository ---
 resource "aws_ecr_repository" "medicure_repo" {
   name = "medicure-app"
-
-  lifecycle {
-    ignore_changes = [name]
-  }
+  force_delete = true
 }
 
 
