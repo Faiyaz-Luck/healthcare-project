@@ -50,7 +50,12 @@ resource "aws_iam_role" "eks_role" {
       Principal = { Service = "eks.amazonaws.com" }
     }]
   })
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
+
 
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   role       = aws_iam_role.eks_role.name
@@ -118,7 +123,7 @@ resource "aws_eks_node_group" "worker_nodes" {
 
 # --- Jenkins EC2 Instance ---
 resource "aws_instance" "jenkins_server" {
-  ami           = "ami-0c55b159cbfafe1f0"  # Ubuntu AMI (update if needed)
+  ami           = "ami-006d9dc984b8eb4b9"  # Ubuntu AMI (update if needed)
   instance_type = "t3.medium"
   subnet_id     = aws_subnet.subnet_1.id
   security_groups = [aws_security_group.eks_sg.id]
@@ -144,7 +149,12 @@ resource "aws_instance" "jenkins_server" {
 # --- Amazon ECR Repository ---
 resource "aws_ecr_repository" "medicure_repo" {
   name = "medicure-app"
+
+  lifecycle {
+    ignore_changes = [name]
+  }
 }
+
 
 # --- Monitoring Setup (Prometheus & Grafana via Helm) ---
 resource "null_resource" "install_monitoring" {
