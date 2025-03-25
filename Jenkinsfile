@@ -43,6 +43,20 @@ pipeline {
             }
         }
 
+        stage('Terraform Import') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+            sh '''
+                export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+                export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+                terraform import aws_iam_role.eks_role eks-cluster-role-new
+                terraform import aws_iam_role.eks_worker_role eks-worker-role
+                terraform import aws_ecr_repository.medicure_repo medicure-app
+            '''
+        }
+    }
+}
+
         stage('Terraform Plan') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
@@ -54,6 +68,7 @@ pipeline {
                 }
             }
         }
+        
 
         stage('Terraform Apply') {
             steps {
