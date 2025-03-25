@@ -1,0 +1,15 @@
+---
+- name: Install Docker & Kubernetes
+  hosts: all
+  become: yes
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+    - name: Install Kubernetes
+      shell: |
+        curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+        echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+        apt-get update
+        apt-get install -y kubelet kubeadm kubectl
