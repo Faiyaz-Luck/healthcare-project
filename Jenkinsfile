@@ -31,7 +31,6 @@ pipeline {
             }
         }
 
-        stages {
         stage('Terraform Init') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
@@ -55,8 +54,6 @@ pipeline {
                 }
             }
         }
-    }
-}
 
         stage('Terraform Apply') {
             steps {
