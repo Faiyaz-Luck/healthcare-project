@@ -57,9 +57,9 @@ pipeline {
                     def resource_type = resource[0]
                     def resource_id = resource[1]
                     
-                    // Check if resource already exists in state
-                    def check_cmd = "terraform state list | grep ${resource_type}"
-                    def exists = sh(script: check_cmd, returnStatus: true) == 0
+                    // Check if resource exists
+                    def check_cmd = "set +e; terraform state list | grep ${resource_type}; echo \$?"
+                    def exists = sh(script: check_cmd, returnStdout: true).trim().toInteger() == 0
                     
                     if (!exists) {
                         sh "terraform import ${resource_type} ${resource_id}"
@@ -71,7 +71,7 @@ pipeline {
         }
     }
 }
-terraform state rm aws_iam_role.eks_role
+    
 
 
         stage('Terraform Plan') {
