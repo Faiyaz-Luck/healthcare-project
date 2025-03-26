@@ -74,7 +74,6 @@ resource "aws_eks_cluster" "k8s_cluster" {
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster_policy,
-    aws_eks_node_group.worker_nodes  
   ]
 }
 
