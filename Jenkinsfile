@@ -43,19 +43,36 @@ pipeline {
             }
         }
 
-        stage('Terraform Import') {
+ stage('Terraform Import') {
     steps {
         withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-            sh '''
-                export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                terraform import aws_iam_role.eks_role eks-cluster-role-new
-                terraform import aws_iam_role.eks_worker_role eks-worker-role
-                terraform import aws_ecr_repository.medicure_repo medicure-app
-            '''
+            script {
+                def import_resources = [
+                    ["aws_iam_role.eks_role", "eks-cluster-role-new"],
+                    ["aws_iam_role.eks_worker_role", "eks-worker-role"],
+                    ["aws_ecr_repository.medicure_repo", "medicure-app"]
+                ]
+
+                import_resources.each { resource ->
+                    def resource_type = resource[0]
+                    def resource_id = resource[1]
+                    
+                    // Check if resource already exists in state
+                    def check_cmd = "terraform state list | grep ${resource_type}"
+                    def exists = sh(script: check_cmd, returnStatus: true) == 0
+                    
+                    if (!exists) {
+                        sh "terraform import ${resource_type} ${resource_id}"
+                    } else {
+                        echo "${resource_type} is already managed by Terraform. Skipping import."
+                    }
+                }
+            }
         }
     }
 }
+terraform state rm aws_iam_role.eks_role
+
 
         stage('Terraform Plan') {
             steps {
