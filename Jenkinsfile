@@ -57,9 +57,9 @@ pipeline {
                     def resource_type = resource[0]
                     def resource_id = resource[1]
                     
-                    // Check if resource exists
-                    def check_cmd = "set +e; terraform state list | grep ${resource_type}; echo \$?"
-                    def exists = sh(script: check_cmd, returnStdout: true).trim().toInteger() == 0
+                    // Check if resource exists using your new command
+                    def check_cmd = "if terraform state list | grep -q ${resource_type}; then echo 1; else echo 0; fi"
+                    def exists = sh(script: check_cmd, returnStdout: true).trim().toInteger() == 1
                     
                     if (!exists) {
                         sh "terraform import ${resource_type} ${resource_id}"
@@ -71,6 +71,7 @@ pipeline {
         }
     }
 }
+
     
 
 
