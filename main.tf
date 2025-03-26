@@ -72,8 +72,12 @@ resource "aws_eks_cluster" "k8s_cluster" {
     security_group_ids = [aws_security_group.eks_sg.id]
   }
 
-  depends_on = [aws_iam_role_policy_attachment.eks_cluster_policy]
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_cluster_policy,
+    aws_eks_node_group.worker_nodes  
+  ]
 }
+
 
 # --- IAM Role for Worker Nodes ---
 resource "aws_iam_role" "eks_worker_role" {
