@@ -48,7 +48,6 @@ pipeline {
         withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
             script {
                 def import_resources = [
-                    ["aws_eks_cluster.k8s_cluster", "medicure-cluster"],
                     ["aws_iam_role.eks_role", "eks-cluster-role-new"],
                     ["aws_iam_role.eks_worker_role", "eks-worker-role"],
                     ["aws_ecr_repository.medicure_repo", "medicure-app"]
@@ -58,17 +57,23 @@ pipeline {
                     def resource_type = resource[0]
                     def resource_id = resource[1]
                     
+                    // Check if resource exists
                     def check_cmd = "set +e; terraform state list | grep ${resource_type}; echo \$?"
                     def exists = sh(script: check_cmd, returnStdout: true).trim().toInteger() == 0
-
+                    
                     if (!exists) {
-                        sh "terraform import ${resource_type} ${resource_id} || true"
+                        sh "terraform import ${resource_type} ${resource_id}"
+                    } else {
+                        echo "${resource_type} is already managed by Terraform. Skipping import."
                     }
                 }
             }
         }
     }
 }
+    
+
+
         stage('Terraform Plan') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
