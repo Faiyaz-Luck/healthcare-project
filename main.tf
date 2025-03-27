@@ -64,7 +64,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 
 # --- Create EKS Cluster ---
 resource "aws_eks_cluster" "k8s_cluster" {
-  name     = "medicure-cluster"
+  name     = "healthcare-cluster"
   role_arn = aws_iam_role.eks_role.arn
 
   vpc_config {
@@ -160,7 +160,7 @@ resource "aws_ecr_repository" "medicure_repo" {
 resource "null_resource" "install_monitoring" {
   provisioner "local-exec" {
     command = <<EOT
-      aws eks update-kubeconfig --region ap-south-1 --name medicure-cluster
+      aws eks update-kubeconfig --region ap-south-1 --name healthcare-cluster
       helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
       helm install prometheus prometheus-community/kube-prometheus-stack
       helm repo add grafana https://grafana.github.io/helm-charts
