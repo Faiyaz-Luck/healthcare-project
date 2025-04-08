@@ -93,6 +93,11 @@ resource "aws_iam_role_policy_attachment" "node_ecr_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy_attachment" "node_autoscaler_policy" {
+  role       = aws_iam_role.eks_node_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AutoScalingFullAccess"
+}
+
 # --- ECR Repository ---
 resource "aws_ecr_repository" "medicure_repo" {
   name                 = "medicure-repo"
@@ -135,7 +140,8 @@ resource "aws_eks_node_group" "default" {
     aws_iam_role_policy_attachment.node_worker_policy,
     aws_iam_role_policy_attachment.node_cni_policy,
     aws_iam_role_policy_attachment.node_ecr_policy,
-    aws_eks_cluster.k8s_cluster
+    aws_eks_cluster.k8s_cluster,
+    aws_iam_role_policy_attachment.node_autoscaler_policy
   ]
 }
 

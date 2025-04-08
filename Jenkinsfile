@@ -25,19 +25,32 @@ pipeline {
             }
         }
 
-        stage('Terraform Init/Apply') {
-            steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'AWS_CREDENTIALS'
-                ]]) {
-                    sh '''
-                        terraform init
-                        terraform apply -auto-approve
-                    '''
-                }
-            }
+stage('Terraform Plan') {
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'AWS_CREDENTIALS'
+        ]]) {
+            sh '''
+                terraform init
+                terraform plan -out=tfplan || exit 1
+            '''
         }
+    }
+}
+
+stage('Terraform Apply') {
+    when {
+        expression {
+            return sh(script: 'test -f tfplan', returnStatus: true) == 0
+        }
+    }
+    steps {
+        sh 'terraform apply -auto-approve tfplan'
+    }
+}
+
+
 
         stage('Build Docker Image') {
             steps {
