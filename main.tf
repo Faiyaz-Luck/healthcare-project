@@ -98,11 +98,60 @@ resource "aws_iam_role_policy_attachment" "node_autoscaler_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AutoScalingFullAccess"
 }
 
+# --- Jenkins Role (used by Jenkins on EC2) ---
+resource "aws_iam_role" "jenkins_eks_role" {
+  name = "jenkins-eks-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# Attach EKS full access
 resource "aws_iam_role_policy_attachment" "jenkins_eks_full_access" {
-  role       = aws_iam_role.jenkins_eks_role.name  # Replace with your actual role name
+  role       = aws_iam_role.jenkins_eks_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFullAccess"
 }
 
+# Attach custom policy that includes eks:DeleteNodegroup
+resource "aws_iam_policy" "jenkins_eks_custom_policy" {
+  name        = "jenkins-eks-custom-policy"
+  description = "Custom EKS permissions for Jenkins role"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "eks:CreateCluster",
+          "eks:DescribeCluster",
+          "eks:DeleteCluster",
+          "eks:UpdateClusterConfig",
+          "eks:UpdateClusterVersion",
+          "eks:CreateNodegroup",
+          "eks:DescribeNodegroup",
+          "eks:UpdateNodegroupConfig",
+          "eks:DeleteNodegroup",
+          "eks:ListNodegroups"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "jenkins_custom_policy_attachment" {
+  role       = aws_iam_role.jenkins_eks_role.name
+  policy_arn = aws_iam_policy.jenkins_eks_custom_policy.arn
+}
 
 # --- ECR Repository ---
 resource "aws_ecr_repository" "medicure_repo" {
@@ -146,8 +195,8 @@ resource "aws_eks_node_group" "default" {
     aws_iam_role_policy_attachment.node_worker_policy,
     aws_iam_role_policy_attachment.node_cni_policy,
     aws_iam_role_policy_attachment.node_ecr_policy,
-    aws_eks_cluster.k8s_cluster,
-    aws_iam_role_policy_attachment.node_autoscaler_policy
+    aws_iam_role_policy_attachment.node_autoscaler_policy,
+    aws_eks_cluster.k8s_cluster
   ]
 }
 
