@@ -116,21 +116,23 @@ resource "aws_iam_role" "eks_node_role" {
 }
 
 locals {
-  eks_node_role_arn = try(data.aws_iam_role.existing_node_role.arn, aws_iam_role.eks_node_role[0].arn)
+  eks_node_role_arn  = try(data.aws_iam_role.existing_node_role.arn, aws_iam_role.eks_node_role[0].arn)
+  eks_node_role_name = try(data.aws_iam_role.existing_node_role.name, aws_iam_role.eks_node_role[0].name)
 }
 
+# --- IAM Policies for Node Role ---
 resource "aws_iam_role_policy_attachment" "eks_node_worker_policy" {
-  role       = local.eks_node_role_arn
+  role       = local.eks_node_role_name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_node_ecr_policy" {
-  role       = local.eks_node_role_arn
+  role       = local.eks_node_role_name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_node_cni_policy" {
-  role       = local.eks_node_role_arn
+  role       = local.eks_node_role_name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
@@ -139,7 +141,6 @@ data "aws_ecr_repository" "existing_repo" {
   name  = "medicure-repo"
   count = 1
 }
-
 
 resource "aws_ecr_repository" "medicure_repo" {
   count                = length(data.aws_ecr_repository.existing_repo[*].repository_url) > 0 ? 0 : 1
