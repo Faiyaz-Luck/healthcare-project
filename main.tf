@@ -95,8 +95,13 @@ locals {
 }
 
 # --- IAM Role for EKS Node Group ---
-resource "aws_iam_role" "eks_node_role" {
+data "aws_iam_role" "existing_node_role" {
   name = "eks-node-role"
+}
+
+resource "aws_iam_role" "eks_node_role" {
+  count = length(data.aws_iam_role.existing_node_role.arn) > 0 ? 0 : 1
+  name  = "eks-node-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -110,29 +115,44 @@ resource "aws_iam_role" "eks_node_role" {
   })
 }
 
+locals {
+  eks_node_role_arn = try(data.aws_iam_role.existing_node_role.arn, aws_iam_role.eks_node_role[0].arn)
+}
+
 resource "aws_iam_role_policy_attachment" "eks_node_worker_policy" {
-  role       = aws_iam_role.eks_node_role.name
+  role       = local.eks_node_role_arn
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_node_ecr_policy" {
-  role       = aws_iam_role.eks_node_role.name
+  role       = local.eks_node_role_arn
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
 resource "aws_iam_role_policy_attachment" "eks_node_cni_policy" {
-  role       = aws_iam_role.eks_node_role.name
+  role       = local.eks_node_role_arn
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
 }
 
 # --- ECR Repository ---
+data "aws_ecr_repository" "existing_repo" {
+  name  = "medicure-repo"
+  count = 1
+}
+
+
 resource "aws_ecr_repository" "medicure_repo" {
+  count                = length(data.aws_ecr_repository.existing_repo[*].repository_url) > 0 ? 0 : 1
   name                 = "medicure-repo"
   image_tag_mutability = "MUTABLE"
 
   encryption_configuration {
     encryption_type = "AES256"
   }
+}
+
+locals {
+  ecr_repo_url = try(data.aws_ecr_repository.existing_repo[0].repository_url, aws_ecr_repository.medicure_repo[0].repository_url)
 }
 
 # --- EKS Cluster ---
@@ -151,7 +171,7 @@ resource "aws_eks_cluster" "k8s_cluster" {
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.k8s_cluster.name
   node_group_name = "healthcare-node-group"
-  node_role_arn   = aws_iam_role.eks_node_role.arn
+  node_role_arn   = local.eks_node_role_arn
   subnet_ids      = local.subnet_ids
 
   scaling_config {
@@ -181,5 +201,5 @@ output "eks_cluster_name" {
 }
 
 output "ecr_repository_url" {
-  value = aws_ecr_repository.medicure_repo.repository_url
+  value = local.ecr_repo_url
 }
