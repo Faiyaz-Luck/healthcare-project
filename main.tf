@@ -2,13 +2,10 @@ provider "aws" {
   region = "ap-south-1"
 }
 
-# --- Check for an existing VPC ---
 data "aws_vpc" "existing_vpc" {
-  filter {
-    name   = "tag:Name"
-    values = ["my-vpc-name"]
-  }
+  default = true
 }
+
 
 resource "aws_vpc" "k8s_vpc" {
   count      = length(data.aws_vpc.existing_vpc.id) > 0 ? 0 : 1
