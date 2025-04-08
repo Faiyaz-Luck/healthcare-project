@@ -22,17 +22,17 @@ spec:
         - name: healthcare-app
           image: faiyazluck/healthcare-project:${IMAGE_TAG}
           ports:
-            - containerPort: 8080
+            - containerPort: 8082
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: 8082
             initialDelaySeconds: 10
             periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: 8082
             initialDelaySeconds: 15
             periodSeconds: 10
           resources:
@@ -54,5 +54,5 @@ spec:
   ports:
     - protocol: TCP
       port: 80
-      targetPort: 8080
+      targetPort: 8082
   type: LoadBalancer

@@ -17,11 +17,11 @@ spec:
         - name: healthcare-app
           image: faiyazluck/healthcare-project:latest
           ports:
-            - containerPort: 8080
+            - containerPort: 8082
           readinessProbe:
             httpGet:
               path: /actuator/health
-              port: 8080
+              port: 8082
             initialDelaySeconds: 10
             periodSeconds: 5
           resources:
