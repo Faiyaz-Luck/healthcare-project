@@ -98,6 +98,12 @@ resource "aws_iam_role_policy_attachment" "node_autoscaler_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AutoScalingFullAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "jenkins_eks_full_access" {
+  role       = aws_iam_role.jenkins_eks_role.name  # Replace with your actual role name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFullAccess"
+}
+
+
 # --- ECR Repository ---
 resource "aws_ecr_repository" "medicure_repo" {
   name                 = "medicure-repo"
