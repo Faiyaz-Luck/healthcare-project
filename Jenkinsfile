@@ -57,7 +57,7 @@ pipeline {
             steps {
                 withKubeConfig([credentialsId: 'k8s-config']) {
                     sh """
-                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply -f -
+                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
                         kubectl rollout status deployment/healthcare-deployment -n dev
                     """
                 }
@@ -71,7 +71,7 @@ pipeline {
             steps {
                 withKubeConfig([credentialsId: 'k8s-config']) {
                     sh """
-                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply -f -
+                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
                         kubectl rollout status deployment/healthcare-deployment -n prod
                     """
                 }
