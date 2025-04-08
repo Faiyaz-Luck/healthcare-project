@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "faiyazluck/healthcare-project"
-        IMAGE_TAG = "build-${BUILD_NUMBER}" // Dynamic tag for versioning
+        IMAGE_TAG = "build-${BUILD_NUMBER}"
     }
 
     stages {
@@ -25,20 +25,19 @@ pipeline {
             }
         }
 
-stage('Terraform Init/Apply') {
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'AWS_CREDENTIALS'
-        ]]) {
-            sh '''
-                terraform init
-                terraform apply -auto-approve
-            '''
+        stage('Terraform Init/Apply') {
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'AWS_CREDENTIALS'
+                ]]) {
+                    sh '''
+                        terraform init
+                        terraform apply -auto-approve
+                    '''
+                }
+            }
         }
-    }
-}
-
 
         stage('Build Docker Image') {
             steps {
@@ -49,9 +48,7 @@ stage('Terraform Init/Apply') {
         stage('Push Docker Image') {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                    sh """
-                        docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
-                    """
+                    sh "docker push ${DOCKER_IMAGE}:${IMAGE_TAG}"
                 }
             }
         }
@@ -59,10 +56,10 @@ stage('Terraform Init/Apply') {
         stage('Deploy to Dev') {
             steps {
                 withKubeConfig([credentialsId: 'k8s-config']) {
-                    sh '''
-                        sed "s|your-dockerhub-username/healthcare-app:latest|faiyazluck/healthcare-project:${IMAGE_TAG}|" k8s-dev-deployment.yaml | kubectl apply -f -
+                    sh """
+                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply -f -
                         kubectl rollout status deployment/healthcare-deployment -n dev
-                    '''
+                    """
                 }
             }
         }
@@ -73,10 +70,10 @@ stage('Terraform Init/Apply') {
             }
             steps {
                 withKubeConfig([credentialsId: 'k8s-config']) {
-                    sh '''
-                        sed "s|your-dockerhub-username/healthcare-app:latest|faiyazluck/healthcare-project:${IMAGE_TAG}|" k8s-prod-deployment.yaml | kubectl apply -f -
+                    sh """
+                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply -f -
                         kubectl rollout status deployment/healthcare-deployment -n prod
-                    '''
+                    """
                 }
             }
         }
