@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_IMAGE = "faiyazluck/healthcare-project"
-        IMAGE_TAG = "latest"  // Modify dynamically if needed
+        IMAGE_TAG = "build-${BUILD_NUMBER}" // Dynamic tag for versioning
     }
 
     stages {
@@ -13,93 +13,30 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
+        stage('Run Unit Tests') {
             steps {
                 sh 'mvn test'
             }
         }
 
-        stage('Build with Maven') {
+        stage('Build JAR') {
             steps {
                 sh 'mvn clean package'
             }
         }
 
-        stage('Verify JAR File') {
-            steps {
-                sh 'ls -l target/'
-            }
-        }
-
-        stage('Terraform Init') {
+        stage('Terraform Init/Apply') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
                     sh '''
                         export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
                         export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
                         terraform init
-                    '''
-                }
-            }
-        }
-
- stage('Terraform Import') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-            script {
-                def import_resources = [
-                    ["aws_iam_role.eks_role", "eks-cluster-role-new"],
-                    ["aws_iam_role.eks_worker_role", "eks-worker-role"],
-                    ["aws_ecr_repository.medicure_repo", "medicure-app"]
-                ]
-
-                import_resources.each { resource ->
-                    def resource_type = resource[0]
-                    def resource_id = resource[1]
-                    
-                    // Check if resource exists using your new command
-                    def check_cmd = "if terraform state list | grep -q ${resource_type}; then echo 1; else echo 0; fi"
-                    def exists = sh(script: check_cmd, returnStdout: true).trim().toInteger() == 1
-                    
-                    if (!exists) {
-                        sh "terraform import ${resource_type} ${resource_id}"
-                    } else {
-                        echo "${resource_type} is already managed by Terraform. Skipping import."
-                    }
-                }
-            }
-        }
-    }
-}
-
-    
-
-
-        stage('Terraform Plan') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-                        terraform plan
-                    '''
-                }
-            }
-        }
-        
-
-        stage('Terraform Apply') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'AWS_CREDENTIALS', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    sh '''
-                        export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
                         terraform apply -auto-approve
                     '''
                 }
             }
         }
-
 
         stage('Build Docker Image') {
             steps {
@@ -111,19 +48,32 @@ pipeline {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
                     sh """
-                        docker tag ${DOCKER_IMAGE}:${IMAGE_TAG} ${DOCKER_IMAGE}:${IMAGE_TAG}
                         docker push ${DOCKER_IMAGE}:${IMAGE_TAG}
                     """
                 }
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Deploy to Dev') {
             steps {
                 withKubeConfig([credentialsId: 'k8s-config']) {
                     sh '''
-                        kubectl apply -f k8s-deployment.yaml
-                        kubectl rollout status deployment/healthcare-deployment
+                        sed "s|your-dockerhub-username/healthcare-app:latest|faiyazluck/healthcare-project:${IMAGE_TAG}|" k8s-dev-deployment.yaml | kubectl apply -f -
+                        kubectl rollout status deployment/healthcare-deployment -n dev
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Prod') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                withKubeConfig([credentialsId: 'k8s-config']) {
+                    sh '''
+                        sed "s|your-dockerhub-username/healthcare-app:latest|faiyazluck/healthcare-project:${IMAGE_TAG}|" k8s-prod-deployment.yaml | kubectl apply -f -
+                        kubectl rollout status deployment/healthcare-deployment -n prod
                     '''
                 }
             }
@@ -132,7 +82,7 @@ pipeline {
 
     post {
         failure {
-            echo "Build failed! Cleaning up..."
+            echo "Build failed! Cleaning up Docker image..."
             sh "docker rmi ${DOCKER_IMAGE}:${IMAGE_TAG} || true"
         }
     }
