@@ -27,7 +27,7 @@ pipeline {
 
         stage('Terraform Init/Apply') {
             steps {
-                withCredentials([[ 
+                withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
                     credentialsId: 'AWS_CREDENTIALS'
                 ]]) {
@@ -54,51 +54,52 @@ pipeline {
         }
 
         stage('Deploy to Dev') {
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'AWS_CREDENTIALS'
-        ]]) {
-            withEnv([
-                "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
-            ]) {
-                withKubeConfig([credentialsId: 'k8s-config']) {
-                    sh '''
-                        kubectl get ns dev || kubectl create namespace dev
-                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
-                        kubectl rollout status deployment/healthcare-deployment -n dev
-                    '''
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'AWS_CREDENTIALS'
+                ]]) {
+                    withEnv([
+                        "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
+                        "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
+                    ]) {
+                        withKubeConfig([credentialsId: 'k8s-config']) {
+                            sh '''
+                                kubectl get ns dev || kubectl create namespace dev
+                                sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
+                                kubectl rollout status deployment/healthcare-deployment -n dev
+                            '''
+                        }
+                    }
                 }
             }
         }
-    }
-}
 
-stage('Deploy to Prod') {
-    when {
-        expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-    }
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'AWS_CREDENTIALS'
-        ]]) {
-            withEnv([
-                "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
-                "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
-            ]) {
-                withKubeConfig([credentialsId: 'k8s-config']) {
-                    sh '''
-                        kubectl get ns prod || kubectl create namespace prod
-                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
-                        kubectl rollout status deployment/healthcare-deployment -n prod
-                    '''
+        stage('Deploy to Prod') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'AWS_CREDENTIALS'
+                ]]) {
+                    withEnv([
+                        "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
+                        "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
+                    ]) {
+                        withKubeConfig([credentialsId: 'k8s-config']) {
+                            sh '''
+                                kubectl get ns prod || kubectl create namespace prod
+                                sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
+                                kubectl rollout status deployment/healthcare-deployment -n prod
+                            '''
+                        }
+                    }
                 }
             }
         }
     }
-}
 
     post {
         failure {
