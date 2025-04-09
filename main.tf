@@ -198,6 +198,7 @@ resource "aws_eks_node_group" "default" {
   ]
 }
 
+
 # --- Outputs ---
 output "eks_cluster_name" {
   value = aws_eks_cluster.k8s_cluster.name
