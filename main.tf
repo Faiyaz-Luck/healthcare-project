@@ -50,10 +50,10 @@ resource "aws_iam_role" "eks_cluster_role" {
   name = "eks-cluster-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "eks.amazonaws.com" }
+      Effect    = "Allow",
+      Principal = { Service = "eks.amazonaws.com" },
       Action    = "sts:AssumeRole"
     }]
   })
@@ -69,10 +69,10 @@ resource "aws_iam_role" "eks_node_role" {
   name = "eks-node-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [{
-      Effect    = "Allow"
-      Principal = { Service = "ec2.amazonaws.com" }
+      Effect    = "Allow",
+      Principal = { Service = "ec2.amazonaws.com" },
       Action    = "sts:AssumeRole"
     }]
   })
@@ -98,29 +98,27 @@ resource "aws_iam_role_policy_attachment" "node_autoscaler_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AutoScalingFullAccess"
 }
 
-# --- Jenkins Role (used by Jenkins on EC2) ---
+# --- Jenkins Role ---
 resource "aws_iam_role" "jenkins_eks_role" {
   name = "jenkins-eks-role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [{
-      Effect    = "Allow"
+      Effect    = "Allow",
       Principal = {
         Service = "ec2.amazonaws.com"
-      }
+      },
       Action = "sts:AssumeRole"
     }]
   })
 }
 
-# Attach EKS full access
 resource "aws_iam_role_policy_attachment" "jenkins_eks_full_access" {
   role       = aws_iam_role.jenkins_eks_role.name
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSFullAccess"
 }
 
-# Attach custom policy that includes eks:DeleteNodegroup
 resource "aws_iam_policy" "jenkins_eks_custom_policy" {
   name        = "jenkins-eks-custom-policy"
   description = "Custom EKS permissions for Jenkins role"
@@ -175,7 +173,7 @@ resource "aws_eks_cluster" "k8s_cluster" {
   }
 }
 
-# --- Node Group ---
+# --- EKS Node Group ---
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.k8s_cluster.name
   node_group_name = "worker-nodes"
@@ -190,8 +188,6 @@ resource "aws_eks_node_group" "default" {
 
   instance_types = ["t3.small"]
   capacity_type  = "ON_DEMAND"
-}
-
 
   depends_on = [
     aws_iam_role_policy_attachment.node_worker_policy,
