@@ -178,18 +178,20 @@ resource "aws_eks_cluster" "k8s_cluster" {
 # --- Node Group ---
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.k8s_cluster.name
-  node_group_name = "healthcare-node-group"
+  node_group_name = "worker-nodes"
   node_role_arn   = aws_iam_role.eks_node_role.arn
   subnet_ids      = [aws_subnet.subnet_1.id, aws_subnet.subnet_2.id]
 
   scaling_config {
     desired_size = 2
-    max_size     = 3
+    max_size     = 2
     min_size     = 1
   }
 
-  instance_types = ["t3.medium"]
-  ami_type       = "AL2_x86_64"
+  instance_types = ["t3.small"]
+  capacity_type  = "ON_DEMAND"
+}
+
 
   depends_on = [
     aws_iam_role_policy_attachment.node_worker_policy,
