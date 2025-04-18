@@ -6,6 +6,8 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
     }
 
+    
+
     stages {
         stage('Checkout Code') {
             steps {
