@@ -6,17 +6,10 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
     }
 
-        stages {
-        stage('Clone Repository') {
-            steps {
-                git credentialsId: 'github-creds', url: 'https://github.com/Faiyaz-Luck/healthcare-project.git', branch: 'main'
-            }
-        }
-
     stages {
         stage('Checkout Code') {
             steps {
-                checkout scm
+                git credentialsId: 'github-creds', url: 'https://github.com/Faiyaz-Luck/healthcare-project.git', branch: 'main'
             }
         }
 
