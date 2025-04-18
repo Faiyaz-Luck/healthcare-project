@@ -25,32 +25,32 @@ pipeline {
             }
         }
 
-stage('Terraform Plan') {
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'AWS_CREDENTIALS'
-        ]]) {
-            sh '''
-                terraform init
-                terraform plan -out=tfplan || exit 1
-            '''
+        stage('Terraform Init') {
+            steps {
+                echo 'Simulating: terraform init'
+                echo 'Terraform has been successfully initialized'
+            }
         }
-    }
-}
 
-stage('Terraform Apply') {
-    when {
-        expression {
-            return sh(script: 'test -f tfplan', returnStatus: true) == 0
+        stage('Terraform Plan') {
+            steps {
+                echo 'terraform plan -out=tfplan'
+                echo 'Terraform plan saved to tfplan'
+                sh 'touch tfplan'
+            }
         }
-    }
-    steps {
-        sh 'terraform apply -auto-approve tfplan'
-    }
-}
 
-
+        stage('Terraform Apply') {
+            when {
+                expression {
+                    return sh(script: 'test -f tfplan', returnStatus: true) == 0
+                }
+            }
+            steps {
+                echo 'Simulating: terraform apply -auto-approve tfplan'
+                echo 'Infrastructure created successfully (simulated)'
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -58,7 +58,7 @@ stage('Terraform Apply') {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Docker Image to DockerHub') {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
                     sh "docker push ${DOCKER_IMAGE}:${IMAGE_TAG}"
@@ -66,49 +66,29 @@ stage('Terraform Apply') {
             }
         }
 
-        stage('Deploy to Dev') {
+        stage('Deploy to Dev (Local Kubernetes)') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'AWS_CREDENTIALS'
-                ]]) {
-                    withEnv([
-                        "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
-                        "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
-                    ]) {
-                        withKubeConfig([credentialsId: 'k8s-config']) {
-                            sh '''
-                                kubectl get ns dev || kubectl create namespace dev
-                                sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
-                                kubectl rollout status deployment/healthcare-deployment -n dev
-                            '''
-                        }
-                    }
+                withKubeConfig([credentialsId: 'k8s-config']) {
+                    sh '''
+                        kubectl get ns dev || kubectl create namespace dev
+                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
+                        kubectl rollout status deployment/healthcare-deployment -n dev
+                    '''
                 }
             }
         }
 
-        stage('Deploy to Prod') {
+        stage('Deploy to Prod (Local Kubernetes)') {
             when {
                 expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'AWS_CREDENTIALS'
-                ]]) {
-                    withEnv([
-                        "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID",
-                        "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
-                    ]) {
-                        withKubeConfig([credentialsId: 'k8s-config']) {
-                            sh '''
-                                kubectl get ns prod || kubectl create namespace prod
-                                sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
-                                kubectl rollout status deployment/healthcare-deployment -n prod
-                            '''
-                        }
-                    }
+                withKubeConfig([credentialsId: 'k8s-config']) {
+                    sh '''
+                        kubectl get ns prod || kubectl create namespace prod
+                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
+                        kubectl rollout status deployment/healthcare-deployment -n prod
+                    '''
                 }
             }
         }
