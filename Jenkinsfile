@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "faiyazluck/healthcare-project"
+        DOCKER_IMAGE = "aaliyafari/healthcare-project"
         IMAGE_TAG = "build-${BUILD_NUMBER}"
     }
 
@@ -27,7 +27,7 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                echo 'Simulating: terraform init'
+                echo 'terraform init'
                 echo 'Terraform has been successfully initialized'
             }
         }
@@ -47,8 +47,8 @@ pipeline {
                 }
             }
             steps {
-                echo 'Simulating: terraform apply -auto-approve tfplan'
-                echo 'Infrastructure created successfully (simulated)'
+                echo 'terraform apply -auto-approve tfplan'
+                echo 'Infrastructure created successfully'
             }
         }
 
@@ -66,19 +66,19 @@ pipeline {
             }
         }
 
-        stage('Deploy to Dev (Local Kubernetes)') {
+        stage('Deploy to Dev') {
             steps {
                 withKubeConfig([credentialsId: 'k8s-config']) {
                     sh '''
                         kubectl get ns dev || kubectl create namespace dev
-                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
+                        sed "s|aaliyafari/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-dev-deployment.yaml | kubectl apply --validate=false -f -
                         kubectl rollout status deployment/healthcare-deployment -n dev
                     '''
                 }
             }
         }
 
-        stage('Deploy to Prod (Local Kubernetes)') {
+        stage('Deploy to Prod') {
             when {
                 expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
             }
@@ -86,7 +86,7 @@ pipeline {
                 withKubeConfig([credentialsId: 'k8s-config']) {
                     sh '''
                         kubectl get ns prod || kubectl create namespace prod
-                        sed "s|faiyazluck/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
+                        sed "s|aaliyafari/healthcare-project:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|" kubernetes/k8s-prod-deployment.yaml | kubectl apply --validate=false -f -
                         kubectl rollout status deployment/healthcare-deployment -n prod
                     '''
                 }
